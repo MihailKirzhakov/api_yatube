@@ -1,31 +1,60 @@
-# yatube_api/api/views.py
-from rest_framework import viewsets, generics
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
-from .models import Group, Post, Comment
-from .serializers import GroupSerializer, PostSerializer, CommentSerializer
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+
+from posts.models import Group, Post
+from .serializers import CommentSerializer, GroupSerializer, PostSerializer
 
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
 
+    def create(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
+
+class PostViewSet(ModelViewSet):
+    queryset = Post.objects.select_related('author')
     serializer_class = PostSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def perform_update(self, serializer):
+        if serializer.instance.author != self.request.user:
+            raise PermissionDenied('Изменение чужого контента запрещено!')
+        super(PostViewSet, self).perform_update(serializer)
 
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+    def perform_destroy(self, instance):
+        if instance.author != self.request.user:
+            raise PermissionDenied('Удаление чужого контента запрещено!')
+        instance.delete()
+
+
+class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+
+    def get_post(self):
+        post_id = self.kwargs.get('post_id')
+        return get_object_or_404(Post, id=post_id)
+
+    def get_queryset(self):
+        post = self.get_post()
+        return post.comments.all()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        post = self.get_post()
+        serializer.save(author=self.request.user, post=post)
+
+    def perform_update(self, serializer):
+        if serializer.instance.author != self.request.user:
+            raise PermissionDenied('Изменение чужого контента запрещено!')
+        super(CommentViewSet, self).perform_update(serializer)
+
+    def perform_destroy(self, instance):
+        if instance.author != self.request.user:
+            raise PermissionDenied('Удаление чужого контента запрещено!')
+        instance.delete()

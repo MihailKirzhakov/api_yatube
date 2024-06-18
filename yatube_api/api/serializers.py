@@ -1,7 +1,7 @@
-# yatube_api/api/serializers.py
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Group, Post, Comment
+from rest_framework import serializers
+
+from posts.models import Group, Post, Comment
 
 User = get_user_model()
 
@@ -18,21 +18,23 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'slug', 'description')
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = UserSerializer()
-    group = GroupSerializer()
-
-    class Meta:
-        model = Post
-        fields = ('id', 'text', 'pub_date', 'author', 'image', 'group')
-        read_only_fields = ('pub_date',)
-
-
 class CommentSerializer(serializers.ModelSerializer):
-    author = UserSerializer()
-    post = PostSerializer()
+    author = serializers.SlugRelatedField(
+        slug_field='username', read_only=True
+    )
 
     class Meta:
         model = Comment
-        fields = ('id', 'author', 'post', 'text', 'created')
-        read_only_fields = ('created',)
+        fields = '__all__'
+        read_only_fields = ('post',)
+
+
+class PostSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username', read_only=True
+    )
+    comments = CommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Post
+        fields = '__all__'
