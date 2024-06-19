@@ -11,7 +11,7 @@ class UpdateDestroyMixin(ModelViewSet):
     def perform_update(self, serializer):
         if serializer.instance.author != self.request.user:
             raise PermissionDenied('Изменение чужого контента запрещено!')
-        super(PostViewSet, self).perform_update(serializer)
+        super().perform_update(serializer)
 
     def perform_destroy(self, instance):
         if instance.author != self.request.user:
