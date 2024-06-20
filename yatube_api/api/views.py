@@ -6,7 +6,7 @@ from posts.models import Group, Post
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
 
 
-class UpdateDestroyMixin(ModelViewSet):
+class UpdateDestroyMixin:
 
     def perform_update(self, serializer):
         if serializer.instance.author != self.request.user:
@@ -24,7 +24,7 @@ class GroupViewSet(ReadOnlyModelViewSet):
     serializer_class = GroupSerializer
 
 
-class PostViewSet(UpdateDestroyMixin):
+class PostViewSet(UpdateDestroyMixin, ModelViewSet):
     queryset = Post.objects.select_related('author')
     serializer_class = PostSerializer
 
@@ -32,7 +32,7 @@ class PostViewSet(UpdateDestroyMixin):
         serializer.save(author=self.request.user)
 
 
-class CommentViewSet(UpdateDestroyMixin):
+class CommentViewSet(UpdateDestroyMixin, ModelViewSet):
     serializer_class = CommentSerializer
 
     def get_post(self):
